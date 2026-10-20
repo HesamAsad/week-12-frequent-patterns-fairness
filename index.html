@@ -764,6 +764,11 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
 .pflow span { border: 1.5px solid var(--rule); border-radius: 8px; padding: .4rem .7rem; background: var(--surface); }
 .pflow span.hot { border-color: var(--noise); background: color-mix(in srgb, var(--noise) 12%, var(--surface)); font-weight: 700; }
 .pflow b { color: var(--muted); }
+svg.grl { width: 100%; max-width: 640px; height: auto; display: block; margin: .6rem auto; overflow: visible; }
+svg.grl .gpath { fill: none; stroke-width: 2.2; transition: stroke .2s; }
+svg.grl .jbx.hot { fill: color-mix(in srgb, var(--noise) 22%, var(--surface)); stroke: var(--noise); }
+svg.grl .fo.sm { font-size: 12px; line-height: 1.25; }
+svg.grl { min-width: 560px; }
 </style>
 </head>
 <body>
@@ -777,7 +782,7 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
     <div class="qg" data-g="q3"><a class="qh" href="#q3"><span class="n">Q3</span>Balancing by hand</a>
       <div class="sub"><a href="#q3-bg"><span class="n">3.0</span>Background and roadmap</a><a href="#q3-pre"><span class="n">3.1</span>Representation bias</a><a href="#w3"><span class="n">3.2</span>Warm-up</a><a href="#q3-sub"><span class="n">3.3</span>Subgroup explosion</a><a href="#q3-dbvae"><span class="n">3.4</span>Learning what is rare</a><a href="#q3-ans"><span class="n">3.5</span>Answer</a></div></div>
     <div class="qg" data-g="q4"><a class="qh" href="#q4"><span class="n">Q4</span>Adversarial debiasing</a>
-      <div class="sub"><a href="#q4-bg"><span class="n">4.0</span>Background and roadmap</a><a href="#q4-pre"><span class="n">4.1</span>Predictor and adversary</a><a href="#q4-proj"><span class="n">4.2</span>The projection term</a><a href="#w4"><span class="n">4.3</span>Warm-up</a><a href="#q4-train"><span class="n">4.4</span>Training live</a><a href="#q4-code"><span class="n">4.5</span>The code</a><a href="#q4-ans"><span class="n">4.6</span>Answer</a></div></div>
+      <div class="sub"><a href="#q4-bg"><span class="n">4.0</span>Background and roadmap</a><a href="#q4-pre"><span class="n">4.1</span>Predictor and adversary</a><a href="#q4-grl"><span class="n">4.2</span>Gradient reversal</a><a href="#q4-gan"><span class="n">4.3</span>Why not a plain GAN game?</a><a href="#q4-proj"><span class="n">4.4</span>Projection and the boundary</a><a href="#w4"><span class="n">4.5</span>Warm-up</a><a href="#q4-train"><span class="n">4.6</span>Training live</a><a href="#q4-code"><span class="n">4.7</span>The code</a><a href="#q4-ans"><span class="n">4.8</span>Answer</a></div></div>
     <div class="qg" data-g="extra"><a class="qh" href="#extra"><span class="n">+</span>Additional material</a>
       <div class="sub"><a href="#a1"><span class="n">A1</span>Contrast and emerging patterns</a><a href="#a2"><span class="n">A2</span>Harms and fairness families</a><a href="#a3"><span class="n">A3</span>Fairness metrics</a><a href="#a4"><span class="n">A4</span>Choosing a metric</a><a href="#a5"><span class="n">A5</span>Where to intervene</a><a href="#cheatnotes"><span class="n">✎</span>Cheat notes</a><a href="#cheat"><span class="n">≡</span>Summary of key results</a><a href="#refs"><span class="n">¶</span>References</a></div></div>
   </div>
@@ -1261,7 +1266,9 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
   <div class="vlabel">Roadmap to the answer</div>
   <ol class="roadmap">
     <li><a href="#q4-pre"><b>The two players</b><span>who sees what, who minimises what</span></a></li>
-    <li><a href="#q4-proj"><b>The update rule</b><span>and its projection term</span></a></li>
+    <li><a href="#q4-grl"><b>Gradient reversal</b><span>one backward pass, two opposite goals</span></a></li>
+    <li><a href="#q4-gan"><b>Why not a plain GAN game?</b><span>what a minimax gets wrong</span></a></li>
+    <li><a href="#q4-proj"><b>The update rule</b><span>its projection term, and the decision boundary it reaches</span></a></li>
     <li><a href="#w4"><b>One step by hand</b><span>with two-dimensional gradients</span></a></li>
     <li><a href="#q4-train"><b>Watch it train</b><span>accuracy against fairness</span></a></li>
     <li><a href="#q4-code"><b>The code</b><span>PyTorch, with its output</span></a></li>
@@ -1278,15 +1285,98 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
   </div>
   <div class="prose">
     <p>The predictor also wants the adversary to <b>fail</b>. If \(\hat y\) carries no information about \(z\), the decisions satisfy demographic parity: the approval rate is the same in both groups (A3).</p>
-    <p>In the lecture's single-network form, the gradient-reversal layer \(J_\lambda\) is the identity going forward and multiplies the gradient by \(-\lambda\) going back, so the shared layers move <b>against</b> the adversary.<sup class="cite"><a href="#ref-ganin">7</a></sup></p>
+    <p>Two questions follow: how does one network train two players with opposite goals (4.2, gradient reversal), and why does Q4 use its own update rule instead of a plain GAN-style game (4.3)?</p>
   </div>
 </section>
 
+<section id="q4-grl">
+  <div class="eyebrow">Q4 · Prerequisite 4.2 · Lecture 22, slides 23–24</div>
+  <h3>Gradient reversal: one backward pass, two opposite goals</h3>
+  <div class="prose">
+    <p><b>The problem.</b> The lecture's network has a shared encoder \(g\) and two heads: \(f\) predicts the label \(y\), the adversary \(a\) predicts the protected attribute \(z\). The goals pull against each other:</p>
+    <ul>
+      <li>the adversary \(a\) should make \(L_Z\) <b>small</b>, so that it gets good at recovering \(z\);</li>
+      <li>the encoder \(g\) should make \(L_Z\) <b>large</b>, so that its features hide \(z\); and make \(L_Y\) small.</li>
+    </ul>
+    <p>Ordinary backpropagation on \(L_Y + L_Z\) would make <i>every</i> part reduce \(L_Z\). The encoder would then help the adversary, the opposite of what we want.</p>
+    <p><b>The fix</b> (Ganin and Lempitsky)<sup class="cite"><a href="#ref-ganin">7</a></sup> is a layer \(J_\lambda\) placed between the encoder and the adversary:</p>
+    $$\text{forward: } J_\lambda(h) = h, \qquad \text{backward: } \frac{\partial L}{\partial h} \;\mapsto\; -\lambda\,\frac{\partial L}{\partial h}.$$
+    <p>It changes nothing going forward, so the adversary still sees the real features. Going back, the gradient of \(L_Z\) is unchanged for the adversary's own weights, since they sit after \(J_\lambda\). The encoder sits before \(J_\lambda\), so it receives that gradient flipped and scaled. One backward pass of the plain sum \(L_Y + L_Z\) therefore gives</p>
+    $$\text{adversary } U:\; \nabla_U L_Z \quad (\text{descend, get better}), \qquad \text{encoder } W:\; \nabla_W L_Y - \lambda\,\nabla_W L_Z \quad (\text{ascend on } L_Z).$$
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag toy">Illustrative</span>Follow the gradients back through \(J_\lambda\)</div>
+    <div class="scroll-x"><svg class="grl" id="q4g-svg" viewBox="0 0 640 250" role="img" aria-label="Encoder g feeding a label head f and, through the gradient-reversal layer J, an adversary a; arrows show forward values or backward gradients"></svg></div>
+    <div class="controls">
+      <div class="seg" id="q4g-dir" role="group" aria-label="Pass"><button type="button" data-d="f">forward pass</button><button type="button" data-d="b" aria-pressed="true">backward pass</button></div>
+      <label><input type="checkbox" id="q4g-on" checked> gradient reversal on</label>
+      <label>\(\lambda\) <input type="range" id="q4g-l" min="0" max="20" value="10"><output id="q4g-lo"></output></label>
+    </div>
+    <div class="bigread" id="q4g-read"></div>
+    <div class="cap">Toy numbers at one input: \(\partial L_Y/\partial h = 0.6\) and \(\partial L_Z/\partial h = 0.8\). "Change per unit step" is the first-order change in each loss when the encoder takes a gradient step of size 1 on the feature \(h\). In Q4's design the "feature" passed to the adversary is the predictor's own output.</div>
+  </div>
+  <div class="prose">
+    <p>In code, the layer takes a few lines. Every other part is an ordinary training loop:</p>
+  </div>
+  <div class="cell"><div class="cell-head"><span class="in">GRL</span><span>A gradient-reversal layer (PyTorch)</span><span class="sp"></span><button type="button" class="copy">Copy</button></div>
+<pre><code class="language-python">class GradReverse(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, h, lam):
+        ctx.lam = lam
+        return h.view_as(h)              # identity going forward
+    @staticmethod
+    def backward(ctx, grad):
+        return -ctx.lam * grad, None     # flip and scale going back
+
+h = g(x)                                  # shared features
+loss = F.binary_cross_entropy_with_logits(f(h), y) \
+     + F.binary_cross_entropy_with_logits(a(GradReverse.apply(h, lam)), z)
+opt.zero_grad(); loss.backward(); opt.step()   # one step trains g, f and a</code></pre></div>
+  <p class="takeaway">Gradient reversal is a trick for running a two-player game with one optimiser and one backward pass. Both players step at the same time: the adversary moves down \(L_Z\) while the encoder moves up it.</p>
+</section>
+
+<section id="q4-gan">
+  <div class="eyebrow">Q4 · Prerequisite 4.3</div>
+  <h3>Why not just train it like a GAN?</h3>
+  <div class="prose">
+    <p>Gradient reversal <b>is</b> a GAN-style minimax. The game being played is</p>
+    $$\min_{W}\;\max_{U}\;\; \Big[\, L_Y(W) \;-\; \lambda\, L_Z(W, U) \,\Big],$$
+    <p>the same shape as a GAN.<sup class="cite"><a href="#ref-goodfellow">8</a></sup> The predictor plays the generator and the adversary plays the discriminator. The two ways of training differ only in when each player moves:</p>
+  </div>
+  <div class="vgrid g3">
+    <div class="vcard def"><div class="vt">Gradient reversal</div><div class="vd">Simultaneous: both players step from the same point, in one backward pass.</div></div>
+    <div class="vcard c2"><div class="vt">GAN-style loop</div><div class="vd">Alternating: one or more adversary steps, then one predictor step on \(L_Y - \lambda L_Z\). Used for fair representations by Edwards and Storkey, and by Madras et al.<sup class="cite"><a href="#ref-edwards">9</a></sup><sup class="cite"><a href="#ref-madras">10</a></sup></div></div>
+    <div class="vcard ok"><div class="vt">Zhang et al. (Q4)</div><div class="vd">Also alternating, but the predictor's step is rebuilt with a projection, Prerequisite 4.4.</div></div>
+  </div>
+  <div class="prose">
+    <p>So the real question is: <b>why add the projection on top of a plain minimax?</b> A plain minimax has three weaknesses.</p>
+    <ol>
+      <li><b>Gradient play need not settle.</b> Two players following their own gradients can circle the equilibrium instead of reaching it. This is the well-known GAN training problem.<sup class="cite"><a href="#ref-mescheder">11</a></sup> The figure below shows it on the simplest possible game.</li>
+      <li><b>The accuracy step can still help the adversary.</b> The predictor's step is \(\nabla L_Y - \lambda\nabla L_Z\). Its \(\nabla L_Y\) part may point the way that lowers \(L_Z\), and for small \(\lambda\) the \(-\lambda\nabla L_Z\) part cannot cancel it. The figure in 4.2 shows this: drop \(\lambda\) to 0.5 and the encoder's step still lowers \(L_Z\).</li>
+      <li><b>"Maximise \(L_Z\)" is the wrong target.</b> We want \(\hat y\) to carry <i>no</i> information about \(z\), where the adversary can only guess the base rate. Against the current adversary, the predictor can push \(L_Z\) above that by making the adversary confidently wrong, for example by flipping which group looks like which. The flipped output still encodes \(z\). The adversary relearns, the predictor flips back, and training oscillates.</li>
+    </ol>
+    <p>The projection deals with the second weakness directly, and it damps the third. To first order, no predictor step ever lowers \(L_Z\), so there is never an accuracy reason to hand the adversary information. It does not by itself prove convergence. That is why Zhang et al. also tune \(\alpha\) and the learning rate carefully.<sup class="cite"><a href="#ref-zhang">12</a></sup></p>
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag live">Live</span>Gradient play on \(\min_w \max_u \; w\,u\): the equilibrium is the origin</div>
+    <canvas class="plot drag" id="q4-gda" height="320" aria-label="Trajectories of simultaneous and alternating gradient descent-ascent on the game w times u"></canvas>
+    <div class="controls">
+      <div class="seg" id="q4-gdam" role="group" aria-label="Update order"><button type="button" data-m="s" aria-pressed="true">simultaneous (gradient reversal)</button><button type="button" data-m="a">alternating (GAN loop)</button></div>
+      <label>step \(\eta\) <input type="range" id="q4-gdae" min="2" max="40" value="15"><output id="q4-gdaeo"></output></label>
+      <button type="button" id="q4-gdap" class="primary">Play</button>
+    </div>
+    <div class="chart-legend"><span style="color:var(--model)"><i></i>trajectory of \((w, u)\)</span><span style="color:var(--data)"><i class="box"></i>start, drag it</span><span style="color:var(--c2)"><i class="box"></i>equilibrium</span></div>
+    <div class="bigread" id="q4-gdar"></div>
+    <div class="cap">Player \(w\) descends \(w u\) and player \(u\) ascends it. Simultaneous steps multiply the distance to the equilibrium by \(\sqrt{1+\eta^2}\) every step, so the path spirals out. Alternating steps keep it on a closed orbit, so it never spirals in. Neither reaches the equilibrium.</div>
+  </div>
+  <p class="takeaway">Gradient reversal and a GAN-style loop solve the same minimax and share its instability. Zhang et al. keep the game but change the predictor's step, so that accuracy updates can never help the adversary. Try "adversary, no projection" in 4.6: it is exactly gradient reversal on Q4's toy data, and it leaves much of the gap.</p>
+</section>
+
 <section id="q4-proj">
-  <div class="eyebrow">Q4 · Prerequisite 4.2</div>
+  <div class="eyebrow">Q4 · Prerequisite 4.4</div>
   <h3>The predictor's update and its projection term</h3>
   <div class="prose">
-    <p>Zhang, Lemoine and Mitchell update the predictor's weights with<sup class="cite"><a href="#ref-zhang">8</a></sup></p>
+    <p>Zhang, Lemoine and Mitchell update the predictor's weights with<sup class="cite"><a href="#ref-zhang">12</a></sup></p>
     $$W \leftarrow W - \eta\,\Big(\nabla_W L_P \;-\; \operatorname{proj}_{\nabla_W L_A}\nabla_W L_P \;-\; \alpha\,\nabla_W L_A\Big),$$
     <p>where the projection of a vector \(g\) onto a direction \(h\) is the part of \(g\) that points along \(h\):</p>
     $$\operatorname{proj}_h g = \frac{g \cdot h}{\lVert h\rVert^2}\,h .$$
@@ -1298,7 +1388,32 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
     <div class="chart-legend"><span style="color:var(--model)"><i></i>\(\nabla_W L_P\)</span><span style="color:var(--c2)"><i></i>\(\nabla_W L_A\)</span><span style="color:var(--muted)"><i class="dash"></i>\(\operatorname{proj}\)</span><span style="color:var(--data)"><i></i>step \(-\eta\,(\cdots)\)</span></div>
     <div class="bigread" id="q4-geor"></div>
   </div>
-  <p class="takeaway">Without the projection, part of an ordinary accuracy step can point the way that <b>helps</b> the adversary. Removing that part first, then pushing along \(+\nabla_W L_A\), means every step makes the adversary's job no easier.</p>
+  <div class="prose">
+    <p><b>From arrows to a decision boundary.</b> For a linear predictor \(\hat y = \sigma(w_1 x_1 + w_2 x_2)\), the weight vector \(W = (w_1, w_2)\) is the <b>normal</b> to the decision boundary \(w_1 x_1 + w_2 x_2 = 0\). The arrows above live in weight space, so every step turns the boundary in data space. On the loan data of 4.6, \(x_2\) is a proxy for the group \(z\). A boundary that ignores \(x_2\) (normal along the \(w_1\) axis, \(w_2 = 0\)) approves both groups at the same rate.</p>
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag live">Live</span>The same update, seen as a turning decision boundary: with and without the projection</div>
+    <div class="controls">
+      <div class="seg" id="q4b-show" role="group" aria-label="Arrows for"><button type="button" data-r="0" aria-pressed="true">arrows: with projection</button><button type="button" data-r="1">arrows: without projection</button></div>
+      <label>\(\alpha\) <input type="range" id="q4b-a" min="2" max="30" value="10"><output id="q4b-ao"></output></label>
+      <button type="button" id="q4b-step">One step</button><button type="button" id="q4b-run" class="primary">Run</button><button type="button" id="q4b-reset">Reset</button>
+    </div>
+    <div class="two">
+      <div><canvas class="plot" id="q4b-ws" height="300" aria-label="Weight space: trajectories of the predictor weights with and without projection, and the current gradients"></canvas><div class="axlab">weight space: \(w_1\) (weight on income) · \(w_2\) (weight on the proxy)</div></div>
+      <div><canvas class="plot" id="q4b-ds" height="300" aria-label="Data space: the starting boundary and the boundaries reached with and without projection"></canvas><div class="axlab">data space: \(x_1\) (income) · \(x_2\) (proxy for the group)</div></div>
+    </div>
+    <div class="chart-legend"><span style="color:var(--ink)"><i></i>with projection</span><span style="color:var(--noise)"><i></i>without projection</span><span style="color:var(--muted)"><i class="dash"></i>start: the plain predictor's boundary</span><span style="color:var(--model)"><i></i>\(\nabla_W L_P\)</span><span style="color:var(--c2)"><i></i>\(\nabla_W L_A\)</span></div>
+    <div class="bigread" id="q4b-read"></div>
+    <div class="cap">Both runs start from the boundary a plain predictor learns (no adversary) and use the same data, learning rate, \(\alpha\) and adversary. Points: green group \(z = 0\), purple group \(z = 1\); filled \(y = 1\), hollow \(y = 0\). The arrows are drawn at the selected run's current weights, rescaled to be visible. The predictor has no bias term here, so \(W\) is exactly two-dimensional.</div>
+  </div>
+  <div class="prose">
+    <p><b>Why the projection reaches a fairer boundary.</b> Look at where each update stops. Write \(u = \nabla L_A / \lVert\nabla L_A\rVert\).</p>
+    <ul>
+      <li><b>Without the projection</b> the step is zero when \(\nabla L_P = \alpha\,\nabla L_A\): the pull towards accuracy and the push against the adversary cancel. That is a compromise in which the boundary still leans on \(x_2\) and the adversary can still read \(z\).</li>
+      <li><b>With the projection</b> the component of the step along \(u\) is \((\nabla L_P\cdot u) - (\nabla L_P\cdot u) - \alpha\lVert\nabla L_A\rVert = -\alpha\lVert\nabla L_A\rVert\). Accuracy no longer pulls along \(u\) at all, so this is zero only when \(\nabla L_A = 0\), when the adversary has nothing left to learn from \(\hat y\).</li>
+    </ul>
+  </div>
+  <p class="takeaway">Without the projection, part of an ordinary accuracy step can point the way that <b>helps</b> the adversary. The boundary then settles where that help balances the push against the adversary, still tilted towards the proxy. Removing that part first, then pushing along \(+\nabla_W L_A\), means every step makes the adversary's job no easier. The boundary keeps turning until it ignores \(x_2\). It pays in accuracy, measured against historical labels that themselves used the proxy.</p>
 </section>
 
 <section id="w4">
@@ -1314,7 +1429,7 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
 </section>
 
 <section id="q4-train">
-  <div class="eyebrow">Q4 · Guided activity</div>
+  <div class="eyebrow">Q4 · Guided activity · 4.6</div>
   <h3>Training the two networks live</h3>
   <div class="investigate">Turn the adversary on. What happens to accuracy, to the approval gap between groups, and to the adversary's accuracy?</div>
   <div class="fig">
@@ -1341,7 +1456,7 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
     <ul>
       <li><b>Classifier prediction:</b> run the predictor, \(\hat y = \sigma(f(x; W))\), and threshold it at 0.5.</li>
       <li><b>Adversary prediction loss:</b> feed the predictor's output (its logit) into the adversary and compare its prediction \(\hat z\) with the protected attribute, \(L_A = \operatorname{BCE}(\hat z, z)\).</li>
-      <li><b>Update:</b> take \(\nabla_W L_P\) and \(\nabla_W L_A\) with two calls to <code>autograd.grad</code>, combine them as above, then update the adversary on its own loss. AIF360's <code>AdversarialDebiasing</code> uses the same projected update, one parameter tensor at a time, with \(\alpha = 0.1\) by default; its adversary is set up differently (see the note below).<sup class="cite"><a href="#ref-aif360code">9</a></sup></li>
+      <li><b>Update:</b> take \(\nabla_W L_P\) and \(\nabla_W L_A\) with two calls to <code>autograd.grad</code>, combine them as above, then update the adversary on its own loss. AIF360's <code>AdversarialDebiasing</code> uses the same projected update, one parameter tensor at a time, with \(\alpha = 0.1\) by default; its adversary is set up differently (see the note below).<sup class="cite"><a href="#ref-aif360code">13</a></sup></li>
     </ul>
   </div>
   <div class="vgrid g3">
@@ -1349,7 +1464,7 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
     <div class="vcard c2"><div class="vt">AIF360 (equalized odds)</div><div class="vd">The adversary sees \([\,s,\; s\,y,\; s\,(1-y)\,]\) with \(s = \sigma\big((1+|c|)\cdot\text{logit}\big)\) and a learnable scale \(c\). Because it is given the true label \(y\), it can only exploit information about \(z\) <i>beyond</i> \(y\).</div></div>
     <div class="vcard ok"><div class="vt">What changes</div><div class="vd">Defeating that adversary makes \(\hat y\) independent of \(z\) <i>given</i> \(y\): equal TPR and FPR across groups (A3), not equal approval rates. Zhang et al. describe both variants.</div></div>
   </div>
-  <div class="cap">AIF360 defaults: \(\alpha = 0.1\) (fixed), one hidden layer of 200 units with dropout (keep 0.8), Adam at 0.001 decayed by 0.96 every 1000 steps, 50 epochs, batch size 128. The demo above uses larger \(\alpha\) on a smaller model so the effect shows quickly.<sup class="cite"><a href="#ref-aif360code">9</a></sup><sup class="cite"><a href="#ref-zhang">8</a></sup></div>
+  <div class="cap">AIF360 defaults: \(\alpha = 0.1\) (fixed), one hidden layer of 200 units with dropout (keep 0.8), Adam at 0.001 decayed by 0.96 every 1000 steps, 50 epochs, batch size 128. The demo above uses larger \(\alpha\) on a smaller model so the effect shows quickly.<sup class="cite"><a href="#ref-aif360code">13</a></sup><sup class="cite"><a href="#ref-zhang">12</a></sup></div>
   <div class="cell"><div class="cell-head"><span class="in">Q4</span><span>Adversarial debiasing with the projection update (PyTorch)</span><span class="sp"></span><button type="button" class="copy">Copy</button></div><pre><code class="language-python">import torch, torch.nn as nn, torch.nn.functional as F
 torch.manual_seed(0)
 
@@ -1414,7 +1529,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <p>We modify the weights over the whole network by updating them through the classification loss as well as the gradient through the adversary:</p>
     $$\nabla_W L_P - \operatorname{proj}_{\nabla_W L_A}\nabla_W L_P - \alpha\,\nabla_W L_A .$$
     <p>The middle term removes all components of the predictor's gradient update that would contribute to the adversary. Without it, the predictor could still make updates that benefit the adversary.</p>
-    <p>Complete code: <a href="https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py">AIF360, <code>adversarial_debiasing.py</code></a><sup class="cite"><a href="#ref-aif360code">9</a></sup> (its adversary also sees the label, so it targets equalized odds); a demographic-parity PyTorch version is above.</p>
+    <p>Complete code: <a href="https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py">AIF360, <code>adversarial_debiasing.py</code></a><sup class="cite"><a href="#ref-aif360code">13</a></sup> (its adversary also sees the label, so it targets equalized odds); a demographic-parity PyTorch version is above.</p>
   </details>
   <a class="cnlink" href="#cn-q4">Cheat notes for Q4 →</a>
 </section>
@@ -1429,9 +1544,9 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
   <div class="eyebrow">A1 · Contrast data mining lecture, pages 3–10 and 49–55</div>
   <h3>Contrast data mining and emerging patterns</h3>
   <div class="prose">
-    <p>Contrast data mining finds patterns whose support <b>differs</b> between two datasets: today's traffic against yesterday's, attacks against normal flows, one class against another.<sup class="cite"><a href="#ref-dongbailey">10</a></sup> The growth rate of a pattern \(X\) from a negative dataset \(D_n\) to a positive dataset \(D_p\) is</p>
+    <p>Contrast data mining finds patterns whose support <b>differs</b> between two datasets: today's traffic against yesterday's, attacks against normal flows, one class against another.<sup class="cite"><a href="#ref-dongbailey">14</a></sup> The growth rate of a pattern \(X\) from a negative dataset \(D_n\) to a positive dataset \(D_p\) is</p>
     $$\operatorname{gr}(X, D_p) = \frac{\operatorname{supp}(X, D_p)}{\operatorname{supp}(X, D_n)} .$$
-    <p>\(X\) is an <b>emerging pattern</b> if \(\operatorname{gr} \ge \rho\), and a <b>jumping emerging pattern</b> if it never occurs in \(D_n\), so \(\operatorname{gr} = \infty\) (page 49).<sup class="cite"><a href="#ref-dongli">11</a></sup></p>
+    <p>\(X\) is an <b>emerging pattern</b> if \(\operatorname{gr} \ge \rho\), and a <b>jumping emerging pattern</b> if it never occurs in \(D_n\), so \(\operatorname{gr} = \infty\) (page 49).<sup class="cite"><a href="#ref-dongli">15</a></sup></p>
   </div>
   <div class="fig">
     <div class="fig-title"><span class="tag live">Live</span>Build a pattern from the network flows of pages 50–51</div>
@@ -1443,7 +1558,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     </div>
   </div>
   <div class="vgrid g3">
-    <div class="vcard def"><div class="vt">Summarising changes</div><div class="vd">Report only the flows whose support jumped between days, instead of thousands of rows (pages 7–10, 52–53).<sup class="cite"><a href="#ref-chavary">12</a></sup></div></div>
+    <div class="vcard def"><div class="vt">Summarising changes</div><div class="vd">Report only the flows whose support jumped between days, instead of thousands of rows (pages 7–10, 52–53).<sup class="cite"><a href="#ref-chavary">16</a></sup></div></div>
     <div class="vcard ok"><div class="vt">One-class classification</div><div class="vd">OCLEP: a test case from the training class tends to contain long emerging patterns; one from another class, short ones (page 54).</div></div>
     <div class="vcard atk"><div class="vt">Versus anomaly detection</div><div class="vd">An anomaly detector learns "normal" and flags deviations; contrast mining compares two current datasets and reports what changed (page 55).</div></div>
   </div>
@@ -1459,7 +1574,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <div class="vcard atk"><div class="vt">Representation</div><div class="vd">Over- or under-represents some groups, or ignores them.</div></div>
     <div class="vcard atk"><div class="vt">Stereotypes</div><div class="vd">Repeats and reinforces stereotypes: word analogies (slide 24).</div></div>
     <div class="vcard atk"><div class="vt">Denigration</div><div class="vd">Produces offensive or insulting outputs about a group.</div></div>
-    <div class="vcard c2"><div class="vt">Who decides? (slide 9)</div><div class="vd">Individuals, policymakers, lawyers and the media each care about different things; there are more than 20 definitions, and many conflict.<sup class="cite"><a href="#ref-mehrabi">13</a></sup></div></div>
+    <div class="vcard c2"><div class="vt">Who decides? (slide 9)</div><div class="vd">Individuals, policymakers, lawyers and the media each care about different things; there are more than 20 definitions, and many conflict.<sup class="cite"><a href="#ref-mehrabi">17</a></sup></div></div>
   </div>
   <div class="vlabel">Three families of definitions (slide 10)</div>
   <div class="vgrid g3">
@@ -1473,7 +1588,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
   <div class="eyebrow">A3 · Lecture 22, slides 11–16</div>
   <h3>Group fairness metrics on the toy loan example</h3>
   <div class="prose">
-    <p>200 applicants in two groups of 100; \(\hat Y = 1\) means approved, \(Y = 1\) means would repay. Four metrics compare the groups:<sup class="cite"><a href="#ref-hardt">14</a></sup></p>
+    <p>200 applicants in two groups of 100; \(\hat Y = 1\) means approved, \(Y = 1\) means would repay. Four metrics compare the groups:<sup class="cite"><a href="#ref-hardt">18</a></sup></p>
     $$\begin{aligned} \text{demographic parity:}\ & P(\hat Y{=}1 \mid S{=}A) = P(\hat Y{=}1 \mid S{=}B) \\ \text{equal opportunity:}\ & \text{equal TPR} = P(\hat Y{=}1 \mid Y{=}1, S) \\ \text{equalized odds:}\ & \text{equal TPR and equal FPR} = P(\hat Y{=}1 \mid Y{=}0, S) \\ \text{predictive parity:}\ & \text{equal PPV} = P(Y{=}1 \mid \hat Y{=}1, S) \end{aligned}$$
   </div>
   <div class="fig">
@@ -1484,7 +1599,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
         <div class="tasks" id="a3-pre"><button type="button" data-p="slide">Slide 11</button><button type="button" data-p="dp">Try: equal approval rates</button><button type="button" data-p="eo">Try: equal TPR and FPR</button></div></div>
       <div><table class="cmp tight" id="a3-tab"></table></div>
     </div>
-    <div class="cap">Group A: 80 of 100 would repay; group B: 50 of 100. With different base rates, no setting makes all four metrics equal at once (slide 15).<sup class="cite"><a href="#ref-kleinberg">15</a></sup></div>
+    <div class="cap">Group A: 80 of 100 would repay; group B: 50 of 100. With different base rates, no setting makes all four metrics equal at once (slide 15).<sup class="cite"><a href="#ref-kleinberg">19</a></sup></div>
   </div>
   <div class="vs2">
     <div class="vcard atk"><div class="vt">Not all errors cost the same (slide 16)</div><div class="vd">A false positive loses the bank money on a loan, but labels an innocent person high-risk in criminal justice. Choose the metric with the people affected.</div></div>
@@ -1496,7 +1611,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
   <div class="eyebrow">A4 · Lecture 22, slide 17</div>
   <h3>A decision tree for choosing a metric</h3>
   <div class="fig">
-    <div class="fig-title"><span class="tag pre">Lecture figure, redrawn</span>Answer the questions to reach a metric (Aequitas fairness tree)<sup class="cite"><a href="#ref-aequitas">16</a></sup></div>
+    <div class="fig-title"><span class="tag pre">Lecture figure, redrawn</span>Answer the questions to reach a metric (Aequitas fairness tree)<sup class="cite"><a href="#ref-aequitas">20</a></sup></div>
     <div class="ftree" id="a4-tree"></div>
     <div class="controls"><button type="button" id="a4-back">Back</button><button type="button" id="a4-reset">Start again</button></div>
   </div>
@@ -1515,7 +1630,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <div class="vcard def"><div class="vt">In-processing (training)</div><div class="vd">Fairness regularisers, adversarial debiasing (Q4), DBVAE (Q3). Use it if you can change the training.</div></div>
     <div class="vcard def"><div class="vt">Post-processing (predictions)</div><div class="vd">Group-specific thresholds, equalized-odds post-processing, reject option. Use it if the model is a black box.</div></div>
   </div>
-  <p class="takeaway">Reduce bias early, and keep checking after deployment (slide 30). Toolkits such as AI Fairness 360 measure; they do not decide what is fair.<sup class="cite"><a href="#ref-aif360">17</a></sup></p>
+  <p class="takeaway">Reduce bias early, and keep checking after deployment (slide 30). Toolkits such as AI Fairness 360 measure; they do not decide what is fair.<sup class="cite"><a href="#ref-aif360">21</a></sup></p>
 </section>
 
 <section id="cheatnotes">
@@ -1590,6 +1705,10 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <li id="ref-gendershades">Joy Buolamwini and Timnit Gebru. <i>Gender shades: intersectional accuracy disparities in commercial gender classification.</i> In FAT*, PMLR 81, pages 77–91, 2018.</li>
     <li id="ref-dbvae">Alexander Amini, Ava P. Soleimany, Wilko Schwarting, Sangeeta N. Bhatia and Daniela Rus. <i>Uncovering and mitigating algorithmic bias through learned latent structure.</i> In AIES, pages 289–295, 2019. <a href="https://doi.org/10.1145/3306618.3314243">doi:10.1145/3306618.3314243</a></li>
     <li id="ref-ganin">Yaroslav Ganin and Victor Lempitsky. <i>Unsupervised domain adaptation by backpropagation.</i> In ICML, PMLR 37, pages 1180–1189, 2015.</li>
+    <li id="ref-goodfellow">Ian Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair, Aaron Courville and Yoshua Bengio. <i>Generative adversarial nets.</i> In NeurIPS 27, pages 2672–2680, 2014.</li>
+    <li id="ref-edwards">Harrison Edwards and Amos Storkey. <i>Censoring representations with an adversary.</i> In ICLR, 2016. <a href="https://arxiv.org/abs/1511.05897">arXiv:1511.05897</a></li>
+    <li id="ref-madras">David Madras, Elliot Creager, Toniann Pitassi and Richard Zemel. <i>Learning adversarially fair and transferable representations.</i> In ICML, PMLR 80, pages 3384–3393, 2018.</li>
+    <li id="ref-mescheder">Lars Mescheder, Andreas Geiger and Sebastian Nowozin. <i>Which training methods for GANs do actually converge?</i> In ICML, PMLR 80, pages 3481–3490, 2018.</li>
     <li id="ref-zhang">Brian Hu Zhang, Blake Lemoine and Margaret Mitchell. <i>Mitigating unwanted biases with adversarial learning.</i> In AIES, pages 335–340, 2018. <a href="https://doi.org/10.1145/3278721.3278779">doi:10.1145/3278721.3278779</a></li>
     <li id="ref-aif360code">Trusted-AI. <i>AIF360: <code>aif360/algorithms/inprocessing/adversarial_debiasing.py</code></i> (TensorFlow implementation of adversarial debiasing). GitHub, accessed 20 October 2026. <a href="https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py">https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py</a></li>
     <li id="ref-dongbailey">Guozhu Dong and James Bailey (editors). <i>Contrast Data Mining: Concepts, Algorithms, and Applications.</i> CRC Press, 2012.</li>
@@ -2127,6 +2246,121 @@ onRedraw(() => {
   draggable(cv, (px, py) => { const [x, y] = P.inv(px, py); if (Math.hypot(x - gp[0], y - gp[1]) < .4) { drag = gp; return true; } if (Math.hypot(x - ga[0], y - ga[1]) < .4) { drag = ga; return true; } return false; },
     (px, py) => { const [x, y] = P.inv(px, py); drag[0] = clamp(x, -3.8, 3.8); drag[1] = clamp(y, -2.8, 2.8); draw(); });
   $('#q4-al').addEventListener('input', draw); $('#q4-pon').addEventListener('change', draw);
+})();
+
+// ---------- Q4.4b: the projection as a turning decision boundary ----------
+(() => {
+  const r = rng(21), g = gaussFrom(r), N = 600, X = [], Y = [], Z = [];
+  for (let i = 0; i < N; i++) { const z = r() < .5 ? 1 : 0, x1 = g(), x2 = 1.5 * (2 * z - 1) + g(), y = x1 + 0.6 * x2 + 0.5 * g() > 0 ? 1 : 0; X.push([x1, x2]); Y.push(y); Z.push(z); }
+  const sig = v => 1 / (1 + Math.exp(-v)), W0 = [3.5, 2.36], lr = 0.5, MAXS = 300;
+  const cols = () => [css('--ink'), css('--noise')];
+  let runs, show = 0, anim = null, steps = 0, Pw;
+  const al = () => +$('#q4b-a').value / 10;
+  const grads = R => { const gp = [0, 0], ga = [0, 0], gu = [0, 0];
+    for (let i = 0; i < N; i++) { const s = R.w[0] * X[i][0] + R.w[1] * X[i][1], ey = sig(s) - Y[i], ez = sig(R.u[0] * s + R.u[1]) - Z[i];
+      for (let k = 0; k < 2; k++) { gp[k] += ey * X[i][k] / N; ga[k] += ez * R.u[0] * X[i][k] / N; } gu[0] += ez * s / N; gu[1] += ez / N; }
+    Object.assign(R, { gp, ga, gu }); };
+  const stepVec = (R, j) => { const n2 = R.ga[0] ** 2 + R.ga[1] ** 2 || 1e-12, d = R.gp[0] * R.ga[0] + R.gp[1] * R.ga[1]; return R.gp.map((v, k) => -(v - (j === 0 ? d / n2 * R.ga[k] : 0) - al() * R.ga[k])); };
+  const metrics = R => { let acc = 0, a1 = 0, n1 = 0, a0 = 0, n0 = 0; for (let i = 0; i < N; i++) { const yh = R.w[0] * X[i][0] + R.w[1] * X[i][1] > 0 ? 1 : 0; acc += yh === Y[i]; if (Z[i]) { a1 += yh; n1++; } else { a0 += yh; n0++; } } return { acc: acc / N, gap: Math.abs(a1 / n1 - a0 / n0), tilt: Math.atan2(R.w[1], R.w[0]) * 180 / Math.PI }; };
+  const reset = () => { cancelAnimationFrame(anim); anim = null; steps = 0; runs = [0, 1].map(() => { const R = { w: W0.slice(), u: [0.5, 0], path: [W0.slice()] }; grads(R); return R; }); draw(); };
+  const once = () => { runs.forEach((R, j) => { const st = stepVec(R, j); for (let k = 0; k < 2; k++) { R.w[k] += lr * st[k]; R.u[k] -= lr * R.gu[k]; } R.path.push(R.w.slice()); grads(R); }); steps++; };
+  const line = (P, w, color, lw, dash) => { const { ctx } = P, pts = []; if (Math.abs(w[1]) > Math.abs(w[0])) [-3.5, 3.5].forEach(x => pts.push([x, -w[0] * x / w[1]])); else [-4.5, 4.5].forEach(y => pts.push([-w[1] * y / w[0], y]));
+    ctx.save(); ctx.beginPath(); ctx.rect(P.X(-3.5), P.Y(4.5), P.X(3.5) - P.X(-3.5), P.Y(-4.5) - P.Y(4.5)); ctx.clip(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.beginPath(); ctx.moveTo(P.X(pts[0][0]), P.Y(pts[0][1])); ctx.lineTo(P.X(pts[1][0]), P.Y(pts[1][1])); ctx.stroke(); ctx.restore(); };
+  const draw = onRedraw(() => {
+    if (!runs) return; $('#q4b-ao').textContent = al().toFixed(1); const C = cols();
+    // weight space
+    Pw = plane($('#q4b-ws'), [-0.4, 4.4], [-0.9, 3.1], 16); const { ctx, X: wx, Y: wy } = Pw;
+    ctx.strokeStyle = css('--rule'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(wx(0), wy(-0.9)); ctx.lineTo(wx(0), wy(3.1)); ctx.stroke();
+    ctx.strokeStyle = alpha(css('--muted'), .45); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(wx(-0.4), wy(0)); ctx.lineTo(wx(4.4), wy(0)); ctx.stroke();
+    ctx.font = font(11.5); ctx.fillStyle = css('--muted'); ctx.textAlign = 'right'; ctx.fillText('w₂ = 0: ignores the proxy', wx(4.35), wy(0) + 15); ctx.textAlign = 'left'; ctx.fillText('w₂', wx(0) + 5, wy(3.1) + 12); ctx.fillText('w₁', wx(4.4) - 16, wy(0) - 6);
+    runs.forEach((R, j) => { const w = R.w, k = 6 / Math.hypot(...w); ctx.setLineDash([3, 4]); ctx.strokeStyle = alpha(C[j], .5); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(wx(0), wy(0)); ctx.lineTo(wx(w[0] * k), wy(w[1] * k)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = C[j]; ctx.lineWidth = 2; ctx.beginPath(); R.path.forEach((p, i) => i ? ctx.lineTo(wx(p[0]), wy(p[1])) : ctx.moveTo(wx(p[0]), wy(p[1]))); ctx.stroke(); });
+    dot(ctx, wx(W0[0]), wy(W0[1]), 5, css('--surface'), css('--muted'), 2);
+    const R = runs[show], st = stepVec(R, show), A = [R.gp, R.ga.map(v => v * al()), st], m = Math.max(...A.map(v => Math.hypot(...v)), 1e-9), s = 0.9 / m, o = R.w;
+    arrow(ctx, wx(o[0]), wy(o[1]), wx(o[0] + R.gp[0] * s), wy(o[1] + R.gp[1] * s), css('--model'), 2);
+    arrow(ctx, wx(o[0]), wy(o[1]), wx(o[0] + R.ga[0] * al() * s), wy(o[1] + R.ga[1] * al() * s), css('--c2'), 2);
+    arrow(ctx, wx(o[0]), wy(o[1]), wx(o[0] + st[0] * s), wy(o[1] + st[1] * s), C[show], 3.2);
+    runs.forEach((R, j) => dot(ctx, wx(R.w[0]), wy(R.w[1]), 5.5, C[j], css('--surface'), 2));
+    // data space
+    const P = plane($('#q4b-ds'), [-3.5, 3.5], [-4.5, 4.5], 14);
+    for (let i = 0; i < N; i += 2) { const c = Z[i] ? css('--c2') : css('--data'); dot(P.ctx, P.X(X[i][0]), P.Y(X[i][1]), 2.6, Y[i] ? alpha(c, .8) : null, Y[i] ? null : alpha(c, .75), 1.2); }
+    line(P, W0, css('--muted'), 1.8, [6, 5]); line(P, runs[1].w, C[1], 2.6); line(P, runs[0].w, C[0], 2.6);
+    const M = runs.map(metrics), chip = (j, lbl) => `<div class="br ${M[j].gap > .15 ? 'bad' : 'good'}"><div class="brt">${lbl}: approval gap · tilt ${M[j].tilt.toFixed(1)}°, accuracy ${M[j].acc.toFixed(3)}</div><div class="brv">${M[j].gap.toFixed(3)}</div></div>`;
+    $('#q4b-read').innerHTML = `<div class="br"><div class="brt">steps</div><div class="brv">${steps}</div></div>` + chip(0, 'with projection') + chip(1, 'without projection');
+  });
+  const run = () => { if (anim) return; if (steps >= MAXS) reset(); const tick = () => { for (let i = 0; i < 3 && steps < MAXS; i++) once(); draw(); anim = steps < MAXS ? requestAnimationFrame(tick) : null; }; if (reduceMotion) { while (steps < MAXS) once(); draw(); } else tick(); };
+  $('#q4b-run').addEventListener('click', run); $('#q4b-reset').addEventListener('click', reset);
+  $('#q4b-step').addEventListener('click', () => { cancelAnimationFrame(anim); anim = null; once(); draw(); });
+  $('#q4b-a').addEventListener('input', reset);
+  $$('#q4b-show button').forEach(b => b.addEventListener('click', () => { show = +b.dataset.r; $$('#q4b-show button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw(); }));
+  reset();
+})();
+
+// ---------- Q4.2: gradient reversal, forward and backward ----------
+(() => {
+  const svg = $('#q4g-svg'), gY = 0.6, gZ = 0.8; let dir = 'b', anim = null, vis = false, t0 = 0;
+  const boxes = [[8, 98, 46, 44, tex('x'), ''], [84, 90, 110, 60, 'Encoder ' + tex('g'), 'weights ' + tex('W')], [300, 22, 110, 56, 'Label head ' + tex('f'), ''], [470, 22, 90, 56, tex('L_Y'), 'label loss'], [292, 168, 70, 56, tex('J_\\lambda'), '<span id="q4g-jsub"></span>'], [398, 168, 110, 56, 'Adversary ' + tex('a'), 'weights ' + tex('U')], [544, 168, 80, 56, tex('L_Z'), 'group loss']];
+  const E = { xg: 'M54,120 L84,120', gh: 'M194,120 L222,120', hf: 'M250,110 C272,62 282,50 300,50', fl: 'M410,50 L470,50', hj: 'M250,130 C272,180 280,196 292,196', ja: 'M362,196 L398,196', al: 'M508,196 L544,196' };
+  const CV = ['ink', 'model', 'c2', 'noise', 'data', 'muted'];
+  svg.innerHTML = `<defs>${CV.map(c => `<marker id="q4gm-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--${c})"/></marker>`).join('')}</defs>`
+    + Object.entries(E).map(([k, d]) => `<path id="q4ge-${k}" d="${d}" class="gpath"/>`).join('')
+    + `<circle cx="236" cy="120" r="14" class="pbx"/>${foDiv(222, 106, 28, 28, tex('h'))}`
+    + boxes.map(([x, y, w, h, t, s]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" class="pbx${t.includes('J_') ? ' jbx' : ''}"/>${foDiv(x, y, w, h, `<b>${t}</b>${s ? `<small>${s}</small>` : ''}`)}`).join('')
+    + `<g id="q4g-lab"></g><g id="q4g-pul"></g>`;
+  const paths = Object.fromEntries(Object.keys(E).map(k => [k, $('#q4ge-' + k)]));
+  const stages = { f: [['xg'], ['gh'], ['hf', 'hj'], ['fl', 'ja'], ['al']], b: [['fl', 'al'], ['hf', 'ja'], ['hj'], ['gh']] };
+  const lab = (x, y, w, h, html, c) => foDiv(x, y, w, h, `<span style="color:var(--${c})">${html}</span>`, 'sm');
+  const draw = onRedraw(() => {
+    const on = $('#q4g-on').checked, lam = +$('#q4g-l').value / 10; $('#q4g-lo').textContent = lam.toFixed(1);
+    const sZ = on ? -lam * gZ : gZ, tot = gY + sZ, f2 = v => (v < 0 ? '-' : '') + Math.abs(v).toFixed(2);
+    const col = dir === 'f' ? { xg: 'ink', gh: 'ink', hf: 'ink', fl: 'ink', hj: 'ink', ja: 'ink', al: 'ink' } : { xg: 'muted', gh: 'data', hf: 'model', fl: 'model', hj: on ? 'noise' : 'c2', ja: 'c2', al: 'c2' };
+    Object.entries(paths).forEach(([k, p]) => { p.style.stroke = `var(--${col[k]})`; p.removeAttribute('marker-end'); p.removeAttribute('marker-start'); if (!(dir === 'b' && k === 'xg')) p.setAttribute(dir === 'f' ? 'marker-end' : 'marker-start', `url(#q4gm-${col[k]})`); });
+    $('#q4g-jsub').innerHTML = dir === 'f' ? 'identity' : on ? '× (−λ)' : 'off: × 1';
+    svg.querySelector('.jbx').classList.toggle('hot', dir === 'b' && on);
+    $('#q4g-lab').innerHTML = dir === 'f'
+      ? lab(186, 94, 40, 22, tex('h'), 'ink') + lab(236, 62, 40, 22, tex('h'), 'ink') + lab(236, 162, 40, 22, tex('h'), 'ink') + lab(420, 24, 40, 22, tex('\\hat y'), 'ink') + lab(360, 170, 40, 22, tex('h'), 'ink') + lab(506, 170, 40, 22, tex('\\hat z'), 'ink')
+      : lab(206, 56, 70, 22, tex('+0.60'), 'model') + lab(346, 146, 70, 22, tex('+0.80'), 'c2')
+        + lab(176, 172, 110, 40, on ? tex(`-${lam.toFixed(1)}\\times 0.80`) + '<br>' + tex('= ' + f2(sZ)) : tex('+0.80') + '<br>(unchanged)', on ? 'noise' : 'c2')
+        + lab(44, 154, 190, 40, 'W receives<br>' + tex(`0.60 ${sZ < 0 ? '-' : '+'} ${Math.abs(sZ).toFixed(2)} = ${f2(tot)}`), 'data')
+        + lab(380, 226, 200, 22, 'U gets ' + tex('\\partial L_Z/\\partial U') + ', sign kept', 'c2');
+    const dY = -gY * tot, dZ = -gZ * tot;
+    $('#q4g-read').innerHTML = dir === 'f' ? `<div class="br"><div class="brt">forward pass</div><div class="brv">${tex('J_\\lambda(h) = h')}</div></div><div class="br"><div class="brt">the adversary sees</div><div class="brv">the real features</div></div>`
+      : `<div class="br"><div class="brt">gradient reaching the encoder</div><div class="brv">${f2(tot)}</div></div><div class="br ${dY <= 0 ? 'good' : 'bad'}"><div class="brt">${tex('L_Y')} change per unit step: ${dY <= 0 ? 'label loss falls' : 'label loss rises'}</div><div class="brv">${f2(dY)}</div></div><div class="br ${dZ > 1e-9 ? 'good' : 'bad'}"><div class="brt">${tex('L_Z')} change per unit step: ${dZ > 1e-9 ? 'the encoder hurts the adversary' : 'the encoder helps the adversary'}</div><div class="brv">${f2(dZ)}</div></div>`;
+  });
+  const pulse = now => {
+    const S = stages[dir], seg = 650, T = (S.length + 1) * seg, t = Math.max(0, now - t0) % T, i = Math.floor(t / seg), fr = (t % seg) / seg;
+    $('#q4g-pul').innerHTML = i < S.length ? S[i].map(k => { const p = paths[k], L = p.getTotalLength(), q = p.getPointAtLength((dir === 'f' ? fr : 1 - fr) * L); return `<circle cx="${q.x}" cy="${q.y}" r="4.5" style="fill:${p.style.stroke}"/>`; }).join('') : '';
+    anim = vis ? requestAnimationFrame(pulse) : null;
+  };
+  if (!reduceMotion) new IntersectionObserver(es => { vis = es[0].isIntersecting; if (vis && !anim) { t0 = performance.now(); anim = requestAnimationFrame(pulse); } }).observe(svg);
+  $$('#q4g-dir button').forEach(b => b.addEventListener('click', () => { dir = b.dataset.d; t0 = performance.now(); $$('#q4g-dir button').forEach(x => x.setAttribute('aria-pressed', x === b)); draw(); }));
+  $('#q4g-on').addEventListener('change', draw); $('#q4g-l').addEventListener('input', draw);
+})();
+
+// ---------- Q4.3: gradient play on min_w max_u w*u ----------
+(() => {
+  const cv = $('#q4-gda'); let P, start = [1.6, 0.4], mode = 's', shown = Infinity, anim = null, drag = false;
+  const path = () => { const e = +$('#q4-gdae').value / 100, pts = [start.slice()]; let [w, u] = start;
+    for (let t = 0; t < 300; t++) { if (mode === 's') [w, u] = [w - e * u, u + e * w]; else { w = w - e * u; u = u + e * w; } pts.push([w, u]); if (Math.hypot(w, u) > 6) break; } return pts; };
+  const draw = onRedraw(() => {
+    $('#q4-gdaeo').textContent = (+$('#q4-gdae').value / 100).toFixed(2);
+    P = plane(cv, [-3, 3], [-3, 3], 18); const { ctx, X, Y } = P;
+    ctx.fillStyle = alpha(css('--model'), .06); ctx.fillRect(X(0), Y(3), X(3) - X(0), Y(0) - Y(3)); ctx.fillRect(X(-3), Y(0), X(0) - X(-3), Y(-3) - Y(0));
+    ctx.strokeStyle = css('--rule'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(-3), Y(0)); ctx.lineTo(X(3), Y(0)); ctx.moveTo(X(0), Y(-3)); ctx.lineTo(X(0), Y(3)); ctx.stroke();
+    ctx.font = font(11.5); ctx.fillStyle = css('--muted'); ctx.textAlign = 'right'; ctx.fillText('w (minimiser)', X(3), Y(0) - 6); ctx.textAlign = 'left'; ctx.fillText('u (maximiser)', X(0) + 6, Y(3) + 12);
+    const pts = path(), n = Math.min(shown, pts.length - 1);
+    ctx.save(); ctx.beginPath(); ctx.rect(X(-3), Y(3), X(3) - X(-3), Y(-3) - Y(3)); ctx.clip();
+    ctx.strokeStyle = css('--model'); ctx.lineWidth = 1.8; ctx.beginPath(); for (let i = 0; i <= n; i++) i ? ctx.lineTo(X(pts[i][0]), Y(pts[i][1])) : ctx.moveTo(X(pts[i][0]), Y(pts[i][1])); ctx.stroke();
+    dot(ctx, X(pts[n][0]), Y(pts[n][1]), 4, css('--model')); ctx.restore();
+    dot(ctx, X(0), Y(0), 6, css('--c2'), css('--surface'), 2); dot(ctx, X(start[0]), Y(start[1]), 6.5, css('--data'), css('--surface'), 2);
+    const r0 = Math.hypot(...start), rn = Math.hypot(...pts[n]), out = rn > r0 * 1.05;
+    $('#q4-gdar').innerHTML = `<div class="br"><div class="brt">steps shown</div><div class="brv">${n}${pts.length < 301 && n === pts.length - 1 ? ' (left the plot)' : ''}</div></div><div class="br"><div class="brt">distance to the equilibrium at the start</div><div class="brv">${r0.toFixed(2)}</div></div><div class="br bad"><div class="brt">distance now: ${out ? 'spiralling out' : 'still circling, not converging'}</div><div class="brv">${rn.toFixed(2)}</div></div>`;
+  });
+  const play = () => { cancelAnimationFrame(anim); shown = 0; if (reduceMotion) { shown = Infinity; draw(); return; } const tick = () => { shown += 2; draw(); anim = shown < 300 ? requestAnimationFrame(tick) : null; }; tick(); };
+  draggable(cv, (px, py) => { const [x, y] = P.inv(px, py); return Math.hypot(x - start[0], y - start[1]) < .35; },
+    (px, py) => { cancelAnimationFrame(anim); shown = Infinity; const [x, y] = P.inv(px, py); start = [clamp(x, -2.8, 2.8), clamp(y, -2.8, 2.8)]; draw(); });
+  $('#q4-gdap').addEventListener('click', play); $('#q4-gdae').addEventListener('input', () => { shown = Infinity; draw(); });
+  $$('#q4-gdam button').forEach(b => b.addEventListener('click', () => { mode = b.dataset.m; $$('#q4-gdam button').forEach(x => x.setAttribute('aria-pressed', x === b)); shown = Infinity; draw(); }));
 })();
 
 // ---------- Q4.4: live adversarial training ----------
