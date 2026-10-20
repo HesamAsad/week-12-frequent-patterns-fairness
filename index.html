@@ -729,6 +729,41 @@ table.ep tr.grp th { text-align: left; font-size: .78rem; color: var(--muted); b
 .ftree .leaf { border: 2px solid var(--data); border-radius: 12px; padding: .8rem 1rem; background: color-mix(in srgb, var(--data) 8%, var(--surface)); }
 .ftree .leaf .vt { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; }
 @media (max-width: 700px) { .fig:has(> svg.lat) { overflow-x: auto; } svg.lat { min-width: 640px; } .cmx { grid-template-columns: minmax(0, 1fr); } }
+/* background sections */
+.w2s { display: grid; gap: .35rem; margin: .4rem 0; }
+.w2r { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; font-family: var(--font-mono); }
+.w2r .tid { font-size: .78rem; color: var(--muted); min-width: 2.8rem; }
+.w2r .word i, .w2r .set i, .w2k i { font-style: normal; display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 5px; border: 1px solid var(--rule); background: var(--surface); margin-right: 2px; font-weight: 600; }
+.w2r .word i { text-transform: uppercase; color: var(--muted); }
+.w2r .set i.f, .w2k i.f { border-color: var(--data); background: color-mix(in srgb, var(--data) 18%, var(--surface)); color: var(--ink); }
+.w2r b { color: var(--muted); }
+.w2k { font-family: var(--font-display); font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+.qfit { border: 1.5px solid var(--model); border-radius: 12px; padding: .8rem 1rem; margin: 1.2rem 0; background: color-mix(in srgb, var(--model) 5%, var(--surface)); }
+.qfit .qfh { font-family: var(--font-display); font-weight: 700; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--model); margin-bottom: .5rem; }
+.qfit .qfg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+@media (max-width: 760px) { .qfit .qfg { grid-template-columns: minmax(0, 1fr); } }
+.qfit .qfg > div > b { display: block; font-family: var(--font-display); font-size: .86rem; margin-bottom: .15rem; }
+.qfit .qfg span { font-size: .93rem; }
+ol.roadmap { list-style: none; counter-reset: rm; padding: 0; margin: .4rem 0 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: .5rem; }
+ol.roadmap li { counter-increment: rm; }
+ol.roadmap a { display: flex; flex-direction: column; gap: .15rem; height: 100%; box-sizing: border-box; text-decoration: none; color: var(--ink); border: 1px solid var(--rule); border-left: 4px solid var(--data); border-radius: 8px; padding: .5rem .65rem; background: var(--surface); transition: transform .15s, border-color .15s; }
+ol.roadmap a:hover { transform: translateY(-2px); border-color: var(--data); }
+ol.roadmap a::before { content: "Step " counter(rm); font-family: var(--font-display); font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--data); }
+ol.roadmap b { font-family: var(--font-display); font-size: .92rem; }
+ol.roadmap span { font-size: .84rem; color: var(--muted); }
+.ranat { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .8rem; margin: .6rem 0; }
+.ranat .rside { border: 1.5px solid var(--rule); border-radius: 12px; padding: .6rem .8rem; background: var(--surface); text-align: center; }
+.ranat .rlab { font-family: var(--font-display); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .4rem; }
+.ranat .ritems { display: flex; gap: .4rem; justify-content: center; flex-wrap: wrap; }
+.ranat .ritem { font-family: var(--font-display); border: 1px solid var(--model); border-radius: 999px; padding: .2rem .65rem; background: color-mix(in srgb, var(--model) 10%, var(--surface)); }
+.ranat .ritem.free { border-color: var(--data); background: color-mix(in srgb, var(--data) 12%, var(--surface)); }
+.ranat .rsum { margin-top: .4rem; font-family: var(--font-display); font-weight: 700; color: var(--data); }
+.ranat .rarrow { font-size: 1.8rem; color: var(--muted); }
+.rchecks { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; justify-content: center; font-size: .9rem; color: var(--muted); }
+.pflow { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .6rem 0; font-family: var(--font-display); font-size: .9rem; }
+.pflow span { border: 1.5px solid var(--rule); border-radius: 8px; padding: .4rem .7rem; background: var(--surface); }
+.pflow span.hot { border-color: var(--noise); background: color-mix(in srgb, var(--noise) 12%, var(--surface)); font-weight: 700; }
+.pflow b { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -736,13 +771,13 @@ table.ep tr.grp th { text-align: left; font-size: .78rem; color: var(--muted); b
 <nav class="toc" aria-label="Contents">
   <div class="links">
     <div class="qg" data-g="q1"><a class="qh" href="#q1"><span class="n">Q1</span>Apriori and FP-growth</a>
-      <div class="sub"><a href="#q1-pre"><span class="n">1.1</span>Support and the Apriori principle</a><a href="#w1"><span class="n">1.2</span>Warm-up</a><a href="#q1-apr"><span class="n">1.3</span>Apriori, level by level</a><a href="#q1-fp"><span class="n">1.4</span>Building the FP-tree</a><a href="#q1-cpb"><span class="n">1.5</span>Mining the FP-tree</a><a href="#q1-cmp"><span class="n">1.6</span>Efficiency</a><a href="#q1-ans"><span class="n">1.7</span>Answer</a></div></div>
+      <div class="sub"><a href="#q1-bg"><span class="n">1.0</span>Background and roadmap</a><a href="#q1-pre"><span class="n">1.1</span>Support and the Apriori principle</a><a href="#w1"><span class="n">1.2</span>Warm-up</a><a href="#q1-apr"><span class="n">1.3</span>Apriori, level by level</a><a href="#q1-fp"><span class="n">1.4</span>Building the FP-tree</a><a href="#q1-cpb"><span class="n">1.5</span>Mining the FP-tree</a><a href="#q1-cmp"><span class="n">1.6</span>Efficiency</a><a href="#q1-ans"><span class="n">1.7</span>Answer</a></div></div>
     <div class="qg" data-g="q2"><a class="qh" href="#q2"><span class="n">Q2</span>Mining with a price constraint</a>
-      <div class="sub"><a href="#q2-pre"><span class="n">2.1</span>Anti-monotone and monotone</a><a href="#w2"><span class="n">2.2</span>Warm-up</a><a href="#q2-latt"><span class="n">2.3</span>Two regions of the lattice</a><a href="#q2-rules"><span class="n">2.4</span>Free item ⇒ $200</a><a href="#q2-ans"><span class="n">2.5</span>Answer</a></div></div>
+      <div class="sub"><a href="#q2-bg"><span class="n">2.0</span>Background and roadmap</a><a href="#q2-pre"><span class="n">2.1</span>Anti-monotone and monotone</a><a href="#w2"><span class="n">2.2</span>Warm-up</a><a href="#q2-latt"><span class="n">2.3</span>Two regions of the lattice</a><a href="#q2-rules"><span class="n">2.4</span>Free item ⇒ $200</a><a href="#q2-ans"><span class="n">2.5</span>Answer</a></div></div>
     <div class="qg" data-g="q3"><a class="qh" href="#q3"><span class="n">Q3</span>Balancing by hand</a>
-      <div class="sub"><a href="#q3-pre"><span class="n">3.1</span>Representation bias</a><a href="#w3"><span class="n">3.2</span>Warm-up</a><a href="#q3-sub"><span class="n">3.3</span>Subgroup explosion</a><a href="#q3-dbvae"><span class="n">3.4</span>Learning what is rare</a><a href="#q3-ans"><span class="n">3.5</span>Answer</a></div></div>
+      <div class="sub"><a href="#q3-bg"><span class="n">3.0</span>Background and roadmap</a><a href="#q3-pre"><span class="n">3.1</span>Representation bias</a><a href="#w3"><span class="n">3.2</span>Warm-up</a><a href="#q3-sub"><span class="n">3.3</span>Subgroup explosion</a><a href="#q3-dbvae"><span class="n">3.4</span>Learning what is rare</a><a href="#q3-ans"><span class="n">3.5</span>Answer</a></div></div>
     <div class="qg" data-g="q4"><a class="qh" href="#q4"><span class="n">Q4</span>Adversarial debiasing</a>
-      <div class="sub"><a href="#q4-pre"><span class="n">4.1</span>Predictor and adversary</a><a href="#q4-proj"><span class="n">4.2</span>The projection term</a><a href="#w4"><span class="n">4.3</span>Warm-up</a><a href="#q4-train"><span class="n">4.4</span>Training live</a><a href="#q4-code"><span class="n">4.5</span>The code</a><a href="#q4-ans"><span class="n">4.6</span>Answer</a></div></div>
+      <div class="sub"><a href="#q4-bg"><span class="n">4.0</span>Background and roadmap</a><a href="#q4-pre"><span class="n">4.1</span>Predictor and adversary</a><a href="#q4-proj"><span class="n">4.2</span>The projection term</a><a href="#w4"><span class="n">4.3</span>Warm-up</a><a href="#q4-train"><span class="n">4.4</span>Training live</a><a href="#q4-code"><span class="n">4.5</span>The code</a><a href="#q4-ans"><span class="n">4.6</span>Answer</a></div></div>
     <div class="qg" data-g="extra"><a class="qh" href="#extra"><span class="n">+</span>Additional material</a>
       <div class="sub"><a href="#a1"><span class="n">A1</span>Contrast and emerging patterns</a><a href="#a2"><span class="n">A2</span>Harms and fairness families</a><a href="#a3"><span class="n">A3</span>Fairness metrics</a><a href="#a4"><span class="n">A4</span>Choosing a metric</a><a href="#a5"><span class="n">A5</span>Where to intervene</a><a href="#cheatnotes"><span class="n">✎</span>Cheat notes</a><a href="#cheat"><span class="n">≡</span>Summary of key results</a><a href="#refs"><span class="n">¶</span>References</a></div></div>
   </div>
@@ -786,6 +821,59 @@ table.ep tr.grp th { text-align: left; font-size: .78rem; color: var(--muted); b
   </div>
   <p class="small">The five transactions spell MONKEY, DONKEY, MAKE, MUCKY and COOKIE. An item counts once per transaction, so the second O in COOKIE adds nothing.</p>
 </section>
+<section id="q1-bg">
+  <div class="eyebrow">Q1 · Background · Contrast data mining lecture, pages 3–14</div>
+  <h3>What the question is about: finding items that occur together</h3>
+  <div class="prose">
+    <p>Picture a shop's till receipts. Each receipt is a <b>transaction</b>: the set of items bought together. <b>Frequent itemset mining</b> asks which combinations of items appear on many receipts.</p>
+    <p>These combinations are the raw material for two later results. <b>Association rules</b>, "customers who buy X also buy Y", come in Question 2. <b>Contrast patterns</b> are itemsets whose frequency changes between two datasets, such as yesterday's and today's network traffic (pages 3–10 and 49).</p>
+  </div>
+  <div class="vlabel">Where frequent itemsets are used</div>
+  <div class="vgrid g3">
+    <div class="vcard ok"><div class="vt">Retail</div><div class="vd">Products bought together drive recommendations, shelf layout and promotions (Question 2).</div></div>
+    <div class="vcard def"><div class="vt">Network security</div><div class="vd">Common combinations of source, destination, port and size summarise thousands of flows into a short report (pages 7–8).</div></div>
+    <div class="vcard c2"><div class="vt">Contrast mining</div><div class="vd">Compare two datasets and report the itemsets whose support jumped: what changed today? (page 49, A1)</div></div>
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag toy">Illustrative</span>The question's data: five words become five transactions</div>
+    <div class="w2s" id="q1-w2s"></div>
+    <div class="cap">A transaction is a <b>set</b>: order does not matter and repeats count once, so COOKIE contributes \(\{c, o, k, i, e\}\). Items shared by many transactions, like \(k\), are candidates for frequent itemsets.</div>
+  </div>
+  <div class="prose">
+    <p><b>Why this is hard.</b> With \(d\) distinct items, every non-empty subset is a possible itemset:</p>
+    $$\#\text{itemsets} = 2^d - 1 .$$
+    <p>Counting every one of them against the database is hopeless beyond a handful of items.</p>
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag live">Live</span>How fast the search space grows</div>
+    <div class="controls"><label>distinct items \(d\) <input type="range" id="q1-d" min="3" max="40" value="11" class="wide"><output id="q1-do"></output></label></div>
+    <div class="bigread" id="q1-dr"></div>
+    <div class="cap">This question has \(d = 11\) distinct letters. A real shop has thousands of products: with \(10^4\) frequent single items, Apriori would already need about \(5 \times 10^7\) candidate pairs (page 14).</div>
+  </div>
+  <div class="vs2">
+    <div class="vcard ok"><div class="vt">Strategy 1 · generate and test (Apriori)</div><div class="vd">Build candidate itemsets one size at a time, count them with a database scan, and skip any candidate that cannot be frequent.<sup class="cite"><a href="#ref-agrawal">1</a></sup></div></div>
+    <div class="vcard def"><div class="vt">Strategy 2 · grow without candidates (FP-growth)</div><div class="vd">Compress the database into a tree once, then grow patterns only from paths that actually occur.<sup class="cite"><a href="#ref-fpgrowth">2</a></sup></div></div>
+  </div>
+  <div class="qfit">
+    <div class="qfh">How the question fits</div>
+    <div class="qfg">
+      <div><b>Given</b><span>5 transactions; min sup 60%, so a count of at least 3</span></div>
+      <div><b>Asked</b><span>every frequent itemset, found twice (Apriori and FP-growth), then a comparison of the work each does</span></div>
+      <div><b>Not needed</b><span>min conf 80%: confidence belongs to rules (Question 2), not itemsets</span></div>
+    </div>
+  </div>
+  <div class="vlabel">Roadmap to the answer</div>
+  <ol class="roadmap">
+    <li><a href="#q1-pre"><b>Define "frequent"</b><span>support and the 60% threshold</span></a></li>
+    <li><a href="#q1-pre"><b>Know what can be skipped</b><span>the Apriori principle</span></a></li>
+    <li><a href="#w1"><b>Practise counting</b><span>three quick checks</span></a></li>
+    <li><a href="#q1-apr"><b>Run Apriori</b><span>level by level, with pruning</span></a></li>
+    <li><a href="#q1-fp"><b>Build the FP-tree</b><span>two database scans</span></a></li>
+    <li><a href="#q1-cpb"><b>Mine the tree</b><span>conditional pattern bases</span></a></li>
+    <li><a href="#q1-cmp"><b>Compare the work</b><span>scans and candidates</span></a></li>
+  </ol>
+</section>
+
 
 <section id="q1-pre">
   <div class="eyebrow">Q1 · Prerequisite 1.1 · pages 11–13</div>
@@ -912,11 +1000,47 @@ table.ep tr.grp th { text-align: left; font-size: .78rem; color: var(--muted); b
     <p>The price of each item in a store is nonnegative. The store manager is only interested in patterns of the form: "one free item may trigger $200 total purchases in the same transaction". State how to mine such patterns efficiently.</p>
   </div>
 </section>
+<section id="q2-bg">
+  <div class="eyebrow">Q2 · Background</div>
+  <h3>What the question is about: rules that answer a business question</h3>
+  <div class="prose">
+    <p>Question 1 found itemsets. A shop acts on <b>association rules</b> \(A \Rightarrow B\): "transactions that contain \(A\) also tend to contain \(B\)". A rule is judged by two numbers. Its support, \(\operatorname{support}(A \cup B)\), says how often it applies. Its <b>confidence</b> says how reliable it is:</p>
+    $$\operatorname{conf}(A \Rightarrow B) = \frac{\operatorname{support}(A \cup B)}{\operatorname{support}(A)} ,$$
+    <p>the fraction of transactions containing \(A\) that also contain \(B\). This is where a "min conf" threshold is used.</p>
+    <p>Unconstrained mining returns thousands of rules. The manager here has a specific <b>promotion question</b>: if we give an item away free, do customers then spend at least $200 in the same visit? <b>Constraint-based mining</b> reports only rules of that shape, and, if the constraint is pushed into the miner, finds them with less work.<sup class="cite"><a href="#ref-hankamber">3</a></sup></p>
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag toy">Illustrative</span>The anatomy of one wanted rule</div>
+    <div class="ranat">
+      <div class="rside"><div class="rlab">one free item</div><div class="ritems"><span class="ritem free">mug <b>$0</b></span></div></div>
+      <div class="rarrow">⇒</div>
+      <div class="rside"><div class="rlab">items totalling at least $200</div><div class="ritems"><span class="ritem">headphones <b>$150</b></span><span class="ritem">speaker <b>$120</b></span></div><div class="rsum">total $270 \(\ge\) $200</div></div>
+    </div>
+    <div class="rchecks"><span>frequent? \(\operatorname{support}(\{\text{mug, headphones, speaker}\}) \ge\) min sup</span><span>reliable? \(\operatorname{conf} \ge\) min conf</span></div>
+  </div>
+  <div class="qfit">
+    <div class="qfh">How the question fits</div>
+    <div class="qfg">
+      <div><b>Given</b><span>transactions, item prices (all nonnegative), min sup and min conf</span></div>
+      <div><b>Asked</b><span>a <b>method</b>, not numbers: how to mine "free item ⇒ total \(\ge\) $200" patterns efficiently</span></div>
+      <div><b>The catch</b><span>the price condition behaves the opposite way to support as itemsets grow</span></div>
+    </div>
+  </div>
+  <div class="vlabel">Roadmap to the answer</div>
+  <ol class="roadmap">
+    <li><a href="#q2-bg"><b>State the pattern</b><span>a rule, its support and confidence</span></a></li>
+    <li><a href="#q2-pre"><b>Two kinds of constraint</b><span>anti-monotone and monotone</span></a></li>
+    <li><a href="#w2"><b>Practise</b><span>which way a constraint points</span></a></li>
+    <li><a href="#q2-latt"><b>See where the patterns live</b><span>and why filtering inside Apriori fails</span></a></li>
+    <li><a href="#q2-rules"><b>Assemble the method</b><span>\(S_1\), \(S_2\), \(S_1S_2\), then rules</span></a></li>
+  </ol>
+</section>
+
 
 <section id="q2-pre">
   <div class="eyebrow">Q2 · Prerequisite 2.1</div>
   <h3>Anti-monotone and monotone constraints</h3>
-  <div class="prose"><p>A constraint is a condition every reported itemset must meet. Two kinds behave in opposite ways as an itemset grows:<sup class="cite"><a href="#ref-ng">3</a></sup><sup class="cite"><a href="#ref-hankamber">4</a></sup></p></div>
+  <div class="prose"><p>A constraint is a condition every reported itemset must meet. Two kinds behave in opposite ways as an itemset grows:<sup class="cite"><a href="#ref-ng">4</a></sup><sup class="cite"><a href="#ref-hankamber">3</a></sup></p></div>
   <div class="vs2">
     <div class="vcard ok"><div class="vt">Anti-monotone</div><div class="vd">If \(X\) fails, every superset fails. Example: support \(\ge\) min sup; total price \(\le \$v\).<p><b>Use:</b> prune \(X\) and everything above it.</p></div></div>
     <div class="vcard atk"><div class="vt">Monotone</div><div class="vd">If \(X\) satisfies it, every superset does. Example: total price \(\ge \$200\), since prices are nonnegative.<p><b>Use:</b> once satisfied, stop checking it for supersets.</p></div></div>
@@ -994,6 +1118,36 @@ table.ep tr.grp th { text-align: left; font-size: .78rem; color: var(--muted); b
     <p>One common approach in mitigating bias adopted by many companies and organizations would be to annotate different subclasses (i.e., light-skinned females, males with hats, etc.) within the training data, and then manually even out the data with respect to these groups. What are the major issues with such solutions?</p>
   </div>
 </section>
+<section id="q3-bg">
+  <div class="eyebrow">Q3 · Background · Lecture 22, slides 3–5 and 18–22</div>
+  <h3>What the question is about: fixing biased training data by hand</h3>
+  <div class="prose">
+    <p>A model learns from its training data. If some kinds of people are rare in it, the model sees few examples of them and tends to work worse for them. This is <b>representation bias</b> (slides 18–19).</p>
+    <p>It causes real harm. Commercial face-analysis systems were 88–94% accurate overall, but up to 34 percentage points worse on darker-skinned women than on lighter-skinned men (slide 5).</p>
+    <p>A common industrial fix works on the data before training (pre-processing, slides 21–22). Label every training image with the attributes that might matter (skin tone, gender, hat, glasses, …), then <b>even out</b> the subgroups by collecting more, over-sampling or down-sampling until each is equally represented.</p>
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag toy">Illustrative</span>Where the fix sits in the pipeline</div>
+    <div class="pflow"><span>Collect data</span><b>→</b><span class="hot">Annotate subgroups</span><b>→</b><span class="hot">Even out the groups</span><b>→</b><span>Train</span><b>→</b><span>Evaluate per group</span></div>
+    <div class="cap">The question is about the two highlighted steps. They sound reasonable, since they target the cause, the data. The question asks what goes wrong when they meet a real dataset.</div>
+  </div>
+  <div class="qfit">
+    <div class="qfh">How the question fits</div>
+    <div class="qfg">
+      <div><b>Given</b><span>the procedure: annotate subclasses such as "light-skinned females" or "males with hats", then manually balance them</span></div>
+      <div><b>Asked</b><span>the major issues with it</span></div>
+      <div><b>Kind of answer</b><span>reasoning, not computation; the answer sheet names two issues</span></div>
+    </div>
+  </div>
+  <div class="vlabel">Roadmap to the answer</div>
+  <ol class="roadmap">
+    <li><a href="#q3-pre"><b>See the harm</b><span>representation bias, intersectional groups</span></a></li>
+    <li><a href="#w3"><b>Count the cost</b><span>subgroups and labels</span></a></li>
+    <li><a href="#q3-sub"><b>Scale it up</b><span>groups multiply; unlabelled attributes stay skewed</span></a></li>
+    <li><a href="#q3-dbvae"><b>An alternative</b><span>learn what is rare (DBVAE)</span></a></li>
+  </ol>
+</section>
+
 
 <section id="q3-pre">
   <div class="eyebrow">Q3 · Prerequisite 3.1 · Lecture 22, slides 5 and 18–19</div>
@@ -1078,6 +1232,42 @@ table.ep tr.grp th { text-align: left; font-size: .78rem; color: var(--muted); b
     <p>Given this description, write the code (in Python) and describe how you can obtain the classifier prediction and the adversary prediction loss.</p>
   </div>
 </section>
+<section id="q4-bg">
+  <div class="eyebrow">Q4 · Background · Lecture 22, slides 21–25</div>
+  <h3>What the question is about: a model that cannot reveal the group</h3>
+  <div class="prose">
+    <p>Instead of fixing the data (Question 3), <b>in-processing</b> changes how the model is trained so that it is fair by construction (slide 21).</p>
+    <p>The goal here: the prediction \(\hat y\) should carry <b>no information</b> about the protected attribute \(z\). For a loan model this means the approval rate is the same in both groups (demographic parity, A3).</p>
+    <p>How do we know \(\hat y\) carries no information about \(z\)? Train a second model, the <b>adversary</b>, to guess \(z\) from \(\hat y\). If even the best adversary can only guess, the information is gone. Both models train together as a two-player game, like the generator and discriminator of a GAN.</p>
+  </div>
+  <div class="fig">
+    <div class="fig-title"><span class="tag toy">Illustrative</span>Reading the question's loss term by term</div>
+    $$\min \Big[\underbrace{\cm{\sum_{(x, y)} L_Y\big(f(g(x)), y\big)}}_{\text{predictor: predict } y \text{ well}} \;+\; \underbrace{\ce{\sum_{(x, z)} L_Z\big(a(J_\lambda(g(x))), z\big)}}_{\text{adversary: predict } z \text{ from the predictor's features}}\Big]$$
+    <div class="vgrid g3">
+      <div class="vcard def"><div class="vt">Predictor \(W\) wants</div><div class="vd">a correct \(\hat y\) (low \(L_P\)) and a confused adversary (high \(L_A\)).</div></div>
+      <div class="vcard atk"><div class="vt">Adversary \(U\) wants</div><div class="vd">to recover \(z\) from \(\hat y\) (low \(L_A\)).</div></div>
+      <div class="vcard ok"><div class="vt">At equilibrium</div><div class="vd">\(\hat y\) is as accurate as it can be while telling nothing about \(z\).</div></div>
+    </div>
+    <div class="cap">\(J_\lambda\) is the gradient-reversal layer: the identity going forward, \(-\lambda\) times the gradient going back. The question replaces it with a separate adversary network and an explicit update rule.</div>
+  </div>
+  <div class="qfit">
+    <div class="qfh">How the question fits</div>
+    <div class="qfg">
+      <div><b>Given</b><span>the loss above and the design: predictor \(W\), its output fed into an adversary \(U\)</span></div>
+      <div><b>Asked</b><span>Python code, how to obtain the classifier's prediction, and how to obtain the adversary's loss</span></div>
+      <div><b>Hidden step</b><span>how the predictor's weights are updated using both losses: the projection rule</span></div>
+    </div>
+  </div>
+  <div class="vlabel">Roadmap to the answer</div>
+  <ol class="roadmap">
+    <li><a href="#q4-pre"><b>The two players</b><span>who sees what, who minimises what</span></a></li>
+    <li><a href="#q4-proj"><b>The update rule</b><span>and its projection term</span></a></li>
+    <li><a href="#w4"><b>One step by hand</b><span>with two-dimensional gradients</span></a></li>
+    <li><a href="#q4-train"><b>Watch it train</b><span>accuracy against fairness</span></a></li>
+    <li><a href="#q4-code"><b>The code</b><span>PyTorch, with its output</span></a></li>
+  </ol>
+</section>
+
 
 <section id="q4-pre">
   <div class="eyebrow">Q4 · Prerequisite 4.1 · Lecture 22, slide 23</div>
@@ -1389,8 +1579,8 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
   <ol class="refs">
     <li id="ref-agrawal">Rakesh Agrawal and Ramakrishnan Srikant. <i>Fast algorithms for mining association rules.</i> In VLDB, pages 487–499, 1994.</li>
     <li id="ref-fpgrowth">Jiawei Han, Jian Pei and Yiwen Yin. <i>Mining frequent patterns without candidate generation.</i> In SIGMOD, pages 1–12, 2000. <a href="https://doi.org/10.1145/342009.335372">doi:10.1145/342009.335372</a></li>
-    <li id="ref-ng">Raymond T. Ng, Laks V. S. Lakshmanan, Jiawei Han and Alex Pang. <i>Exploratory mining and pruning optimizations of constrained associations rules.</i> In SIGMOD, pages 13–24, 1998. <a href="https://doi.org/10.1145/276304.276307">doi:10.1145/276304.276307</a></li>
     <li id="ref-hankamber">Jiawei Han, Micheline Kamber and Jian Pei. <i>Data Mining: Concepts and Techniques</i>, 3rd edition, chapters 6–7. Morgan Kaufmann, 2011.</li>
+    <li id="ref-ng">Raymond T. Ng, Laks V. S. Lakshmanan, Jiawei Han and Alex Pang. <i>Exploratory mining and pruning optimizations of constrained associations rules.</i> In SIGMOD, pages 13–24, 1998. <a href="https://doi.org/10.1145/276304.276307">doi:10.1145/276304.276307</a></li>
     <li id="ref-gendershades">Joy Buolamwini and Timnit Gebru. <i>Gender shades: intersectional accuracy disparities in commercial gender classification.</i> In FAT*, PMLR 81, pages 77–91, 2018.</li>
     <li id="ref-dbvae">Alexander Amini, Ava P. Soleimany, Wilko Schwarting, Sangeeta N. Bhatia and Daniela Rus. <i>Uncovering and mitigating algorithmic bias through learned latent structure.</i> In AIES, pages 289–295, 2019. <a href="https://doi.org/10.1145/3306618.3314243">doi:10.1145/3306618.3314243</a></li>
     <li id="ref-ganin">Yaroslav Ganin and Victor Lempitsky. <i>Unsupervised domain adaptation by backpropagation.</i> In ICML, PMLR 37, pages 1180–1189, 2015.</li>
@@ -1682,6 +1872,20 @@ function latticeSVG(svg, items, statusOf, labelOf) {
   Object.values(pos).forEach(p => { const st = statusOf(p.s); h += `<g class="ln ${st}"><rect x="${p.x - p.w / 2}" y="${p.y - 13}" width="${p.w}" height="26" rx="6"/><text x="${p.x}" y="${p.y + 4}" text-anchor="middle">${labelOf(p.s)}</text></g>`; });
   svg.innerHTML = h;
 }
+
+// ---------- Q1 background: words to transactions, and the search space ----------
+(() => {
+  const freq = { k: 5, e: 4, m: 3, o: 3, y: 3 };
+  $('#q1-w2s').innerHTML = WORDS.map((w, i) => `<div class="w2r"><span class="tid">${TIDS[i]}</span><span class="word">${[...w].map(c => `<i>${c}</i>`).join('')}</span><b>→</b><span class="set">{ ${D1[i].map(c => `<i class="${freq[c] ? 'f' : ''}">${c}</i>`).join('')} }</span></div>`).join('') +
+    '<div class="w2k"><i class="f">k</i> highlighted: items in at least 3 transactions</div>';
+  const fmtBig = v => v < 1e6 ? Math.round(v).toLocaleString() : (() => { const e = Math.floor(Math.log10(v)); return `${(v / 10 ** e).toFixed(1)} × 10<sup>${e}</sup>`; })();
+  const draw = () => {
+    const d = +$('#q1-d').value; $('#q1-do').textContent = d;
+    const all = 2 ** d - 1, pairs = d * (d - 1) / 2, years = all / 1e6 / 3600 / 24 / 365;
+    $('#q1-dr').innerHTML = `<div class="br"><div class="brt">possible itemsets, ${tex('2^d - 1')}</div><div class="brv">${fmtBig(all)}</div></div><div class="br"><div class="brt">possible pairs, ${tex('d(d-1)/2')}</div><div class="brv">${fmtBig(pairs)}</div></div><div class="br ${years > 1 ? 'bad' : 'good'}"><div class="brt">time to count them all at a million per second</div><div class="brv">${all / 1e6 < 60 ? (all / 1e6).toFixed(3) + ' s' : years < 1 ? (all / 1e6 / 3600).toFixed(1) + ' h' : fmtBig(years) + ' years'}</div></div>`;
+  };
+  $('#q1-d').addEventListener('input', draw); draw();
+})();
 
 // ---------- Q1.1: lattice ----------
 (() => {

@@ -6,7 +6,7 @@ Live site: [hesamasad.github.io/week-12-frequent-patterns-fairness](https://hesa
 
 ## What's inside
 
-The four questions form the main sections. Each has the problem statement, inline prerequisites, a self-checking warm-up, a guided live activity, and one answer reveal.
+The four questions form the main sections. Each has the problem statement; a background section that explains the problem in plain words, why it matters, how the question fits (given, asked, not needed) and a step-by-step roadmap linked to the sections below; then inline prerequisites, a self-checking warm-up, a guided live activity, and one answer reveal.
 
 | Question | Prerequisites | Live activity |
 |---|---|---|
