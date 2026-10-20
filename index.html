@@ -1341,9 +1341,15 @@ ol.roadmap span { font-size: .84rem; color: var(--muted); }
     <ul>
       <li><b>Classifier prediction:</b> run the predictor, \(\hat y = \sigma(f(x; W))\), and threshold it at 0.5.</li>
       <li><b>Adversary prediction loss:</b> feed the predictor's output (its logit) into the adversary and compare its prediction \(\hat z\) with the protected attribute, \(L_A = \operatorname{BCE}(\hat z, z)\).</li>
-      <li><b>Update:</b> take \(\nabla_W L_P\) and \(\nabla_W L_A\) with two calls to <code>autograd.grad</code>, combine them as above, then update the adversary on its own loss. AIF360's <code>AdversarialDebiasing</code> does the same in TensorFlow.<sup class="cite"><a href="#ref-aif360">9</a></sup></li>
+      <li><b>Update:</b> take \(\nabla_W L_P\) and \(\nabla_W L_A\) with two calls to <code>autograd.grad</code>, combine them as above, then update the adversary on its own loss. AIF360's <code>AdversarialDebiasing</code> uses the same projected update, one parameter tensor at a time, with \(\alpha = 0.1\) by default; its adversary is set up differently (see the note below).<sup class="cite"><a href="#ref-aif360code">9</a></sup></li>
     </ul>
   </div>
+  <div class="vgrid g3">
+    <div class="vcard def"><div class="vt">This page (demographic parity)</div><div class="vd">The adversary sees only the predictor's logit: \(\hat z = a(\text{logit}; U)\). If it fails, \(\hat y\) carries no information about \(z\), so the approval rates match across groups.</div></div>
+    <div class="vcard c2"><div class="vt">AIF360 (equalized odds)</div><div class="vd">The adversary sees \([\,s,\; s\,y,\; s\,(1-y)\,]\) with \(s = \sigma\big((1+|c|)\cdot\text{logit}\big)\) and a learnable scale \(c\). Because it is given the true label \(y\), it can only exploit information about \(z\) <i>beyond</i> \(y\).</div></div>
+    <div class="vcard ok"><div class="vt">What changes</div><div class="vd">Defeating that adversary makes \(\hat y\) independent of \(z\) <i>given</i> \(y\): equal TPR and FPR across groups (A3), not equal approval rates. Zhang et al. describe both variants.</div></div>
+  </div>
+  <div class="cap">AIF360 defaults: \(\alpha = 0.1\) (fixed), one hidden layer of 200 units with dropout (keep 0.8), Adam at 0.001 decayed by 0.96 every 1000 steps, 50 epochs, batch size 128. The demo above uses larger \(\alpha\) on a smaller model so the effect shows quickly.<sup class="cite"><a href="#ref-aif360code">9</a></sup><sup class="cite"><a href="#ref-zhang">8</a></sup></div>
   <div class="cell"><div class="cell-head"><span class="in">Q4</span><span>Adversarial debiasing with the projection update (PyTorch)</span><span class="sp"></span><button type="button" class="copy">Copy</button></div><pre><code class="language-python">import torch, torch.nn as nn, torch.nn.functional as F
 torch.manual_seed(0)
 
@@ -1408,7 +1414,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <p>We modify the weights over the whole network by updating them through the classification loss as well as the gradient through the adversary:</p>
     $$\nabla_W L_P - \operatorname{proj}_{\nabla_W L_A}\nabla_W L_P - \alpha\,\nabla_W L_A .$$
     <p>The middle term removes all components of the predictor's gradient update that would contribute to the adversary. Without it, the predictor could still make updates that benefit the adversary.</p>
-    <p>Complete code: <a href="https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py">AIF360, <code>adversarial_debiasing.py</code></a>; a PyTorch version is above.</p>
+    <p>Complete code: <a href="https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py">AIF360, <code>adversarial_debiasing.py</code></a><sup class="cite"><a href="#ref-aif360code">9</a></sup> (its adversary also sees the label, so it targets equalized odds); a demographic-parity PyTorch version is above.</p>
   </details>
   <a class="cnlink" href="#cn-q4">Cheat notes for Q4 →</a>
 </section>
@@ -1509,7 +1515,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <div class="vcard def"><div class="vt">In-processing (training)</div><div class="vd">Fairness regularisers, adversarial debiasing (Q4), DBVAE (Q3). Use it if you can change the training.</div></div>
     <div class="vcard def"><div class="vt">Post-processing (predictions)</div><div class="vd">Group-specific thresholds, equalized-odds post-processing, reject option. Use it if the model is a black box.</div></div>
   </div>
-  <p class="takeaway">Reduce bias early, and keep checking after deployment (slide 30). Toolkits such as AI Fairness 360 measure; they do not decide what is fair.<sup class="cite"><a href="#ref-aif360">9</a></sup></p>
+  <p class="takeaway">Reduce bias early, and keep checking after deployment (slide 30). Toolkits such as AI Fairness 360 measure; they do not decide what is fair.<sup class="cite"><a href="#ref-aif360">17</a></sup></p>
 </section>
 
 <section id="cheatnotes">
@@ -1585,7 +1591,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <li id="ref-dbvae">Alexander Amini, Ava P. Soleimany, Wilko Schwarting, Sangeeta N. Bhatia and Daniela Rus. <i>Uncovering and mitigating algorithmic bias through learned latent structure.</i> In AIES, pages 289–295, 2019. <a href="https://doi.org/10.1145/3306618.3314243">doi:10.1145/3306618.3314243</a></li>
     <li id="ref-ganin">Yaroslav Ganin and Victor Lempitsky. <i>Unsupervised domain adaptation by backpropagation.</i> In ICML, PMLR 37, pages 1180–1189, 2015.</li>
     <li id="ref-zhang">Brian Hu Zhang, Blake Lemoine and Margaret Mitchell. <i>Mitigating unwanted biases with adversarial learning.</i> In AIES, pages 335–340, 2018. <a href="https://doi.org/10.1145/3278721.3278779">doi:10.1145/3278721.3278779</a></li>
-    <li id="ref-aif360">Rachel K. E. Bellamy et al. <i>AI Fairness 360: an extensible toolkit for detecting and mitigating algorithmic bias.</i> IBM Journal of Research and Development 63(4/5):4:1–4:15, 2019. <a href="https://doi.org/10.1147/JRD.2019.2942287">doi:10.1147/JRD.2019.2942287</a>. Code: <a href="https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py">adversarial_debiasing.py</a></li>
+    <li id="ref-aif360code">Trusted-AI. <i>AIF360: <code>aif360/algorithms/inprocessing/adversarial_debiasing.py</code></i> (TensorFlow implementation of adversarial debiasing). GitHub, accessed 20 October 2026. <a href="https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py">https://github.com/Trusted-AI/AIF360/blob/main/aif360/algorithms/inprocessing/adversarial_debiasing.py</a></li>
     <li id="ref-dongbailey">Guozhu Dong and James Bailey (editors). <i>Contrast Data Mining: Concepts, Algorithms, and Applications.</i> CRC Press, 2012.</li>
     <li id="ref-dongli">Guozhu Dong and Jinyan Li. <i>Efficient mining of emerging patterns: discovering trends and differences.</i> In KDD, pages 43–52, 1999. <a href="https://doi.org/10.1145/312129.312191">doi:10.1145/312129.312191</a></li>
     <li id="ref-chavary">Elaheh Alipour Chavary, Sarah M. Erfani and Christopher Leckie. <i>Summarizing significant changes in network traffic using contrast pattern mining.</i> In CIKM, pages 2015–2018, 2017. <a href="https://doi.org/10.1145/3132847.3133111">doi:10.1145/3132847.3133111</a></li>
@@ -1593,6 +1599,7 @@ base rates: P(y=1 | z=1) = 0.755, P(y=1 | z=0) = 0.245</pre></details>
     <li id="ref-hardt">Moritz Hardt, Eric Price and Nathan Srebro. <i>Equality of opportunity in supervised learning.</i> In NeurIPS, pages 3315–3323, 2016.</li>
     <li id="ref-kleinberg">Jon Kleinberg, Sendhil Mullainathan and Manish Raghavan. <i>Inherent trade-offs in the fair determination of risk scores.</i> In ITCS, pages 43:1–43:23, 2017. <a href="https://doi.org/10.4230/LIPIcs.ITCS.2017.43">doi:10.4230/LIPIcs.ITCS.2017.43</a></li>
     <li id="ref-aequitas">Pedro Saleiro, Benedict Kuester, Loren Hinkson, Jesse London, Abby Stevens, Ari Anisfeld, Kit T. Rodolfa and Rayid Ghani. <i>Aequitas: a bias and fairness audit toolkit.</i> arXiv:1811.05577, 2018. <a href="https://arxiv.org/abs/1811.05577">arXiv:1811.05577</a></li>
+    <li id="ref-aif360">Rachel K. E. Bellamy et al. <i>AI Fairness 360: an extensible toolkit for detecting and mitigating algorithmic bias.</i> IBM Journal of Research and Development 63(4/5):4:1–4:15, 2019. <a href="https://doi.org/10.1147/JRD.2019.2942287">doi:10.1147/JRD.2019.2942287</a></li>
   </ol>
   <p class="small">Lecture slides: COMP90073 Trustworthy Machine Learning, The University of Melbourne. "Contrast Data Mining: Methods and Applications" (Sarah Erfani; cited by PDF page) and Lecture 22 "Bias and Fairness in Machine Learning" (Hanxun Huang, Semester 2, 2026; cited by slide). Tutorial: <code>w12-tutorial-answers.pdf</code>.</p>
 </section>
